@@ -216,6 +216,7 @@ var events = {
   FILE_TYPE_MISMATCH_EVENT: 'file-type-mismatch',
   IMAGE_REMOVE_EVENT: 'image-remove',
   MOVE_EVENT: 'move',
+  ROTATE_EVENT: 'rotate',
   ZOOM_EVENT: 'zoom'
 };
 
@@ -376,6 +377,12 @@ var cropper = { render: function render() {
         },
         moveRightwards: function moveRightwards(amount) {
           _this.move({ x: amount, y: 0 });
+        },
+        rotateCCW: function rotateCCW() {
+          _this.rotate(-90);
+        },
+        rotateCW: function rotateCW() {
+          _this.rotate(90);
         },
         zoomIn: function zoomIn() {
           _this.zoom(true);
@@ -725,6 +732,13 @@ var cropper = { render: function render() {
       if (this.realHeight - this.imgData.startY > this.imgData.height) {
         this.imgData.startY = -(this.imgData.height - this.realHeight);
       }
+    },
+    rotate: function rotate(degrees) {
+      if (!degrees) return;
+
+      var ctx = this.ctx;
+      ctx.rotate(degrees * Math.PI / 180);
+      this.$emit(events.ROTATE_EVENT);
     },
     zoom: function zoom(zoomIn, pos) {
       var innerAcceleration = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
