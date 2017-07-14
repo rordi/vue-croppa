@@ -734,10 +734,28 @@ var cropper = { render: function render() {
       }
     },
     rotate: function rotate(degrees) {
+      var _this4 = this;
+
       if (!degrees) return;
 
-      var ctx = this.ctx;
-      ctx.rotate(degrees * Math.PI / 180);
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2); // move to center
+      this.ctx.rotate(degrees * Math.PI / 180);
+
+      // special drawing after rotation
+      if (!this.img) return;
+      if (window.requestAnimationFrame) {
+        requestAnimationFrame(function () {
+          _this4.paintBackground();
+          _this4.ctx.drawImage(_this4.img, -_this4.canvas.width / 2, -_this4.canvas.height / 2, _this4.canvas.height, _this4.canvas.width);
+        });
+      } else {
+        this.paintBackground();
+        this.ctx.drawImage(this.img, -this.canvas.width / 2, -this.canvas.height / 2, this.canvas.height, this.canvas.width);
+      }
+
+      this.ctx.translate(-(this.canvas.width / 2), -(this.canvas.height / 2)); // move to top left corner
+      this.draw();
       this.$emit(events.ROTATE_EVENT);
     },
     zoom: function zoom(zoomIn, pos) {
@@ -794,7 +812,7 @@ var cropper = { render: function render() {
       this.ctx.fillRect(0, 0, this.realWidth, this.realHeight);
     },
     draw: function draw() {
-      var _this4 = this;
+      var _this5 = this;
 
       var ctx = this.ctx;
       if (!this.img) return;
@@ -806,8 +824,8 @@ var cropper = { render: function render() {
 
       if (window.requestAnimationFrame) {
         requestAnimationFrame(function () {
-          _this4.paintBackground();
-          ctx.drawImage(_this4.img, startX, startY, width, height);
+          _this5.paintBackground();
+          ctx.drawImage(_this5.img, startX, startY, width, height);
         });
       } else {
         this.paintBackground();
@@ -823,7 +841,7 @@ var cropper = { render: function render() {
       this.canvas.toBlob(callback, mimeType, qualityArgument);
     },
     promisedBlob: function promisedBlob() {
-      var _this5 = this;
+      var _this6 = this;
 
       for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
         args[_key] = arguments[_key];
@@ -835,7 +853,7 @@ var cropper = { render: function render() {
       }
       return new Promise(function (resolve, reject) {
         try {
-          _this5.generateBlob(function (blob) {
+          _this6.generateBlob(function (blob) {
             resolve(blob);
           }, args);
         } catch (err) {

@@ -533,8 +533,24 @@
       rotate (degrees) {
         if (!degrees) return
 
-        let ctx = this.ctx
-        ctx.rotate(degrees * Math.PI / 180)
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2); // move to center
+        this.ctx.rotate(degrees * Math.PI / 180)
+
+        // special drawing after rotation
+        if (!this.img) return
+        if (window.requestAnimationFrame) {
+          requestAnimationFrame(() => {
+            this.paintBackground()
+            this.ctx.drawImage(this.img, -this.canvas.width/2, -this.canvas.height/2, this.canvas.height, this.canvas.width)
+          })
+        } else {
+          this.paintBackground()
+          this.ctx.drawImage(this.img, -this.canvas.width/2, -this.canvas.height/2, this.canvas.height, this.canvas.width)
+        }
+
+        this.ctx.translate(-(this.canvas.width / 2), -(this.canvas.height / 2)); // move to top left corner
+        this.draw()
         this.$emit(events.ROTATE_EVENT)
       },
 
