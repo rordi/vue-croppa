@@ -159,6 +159,12 @@
           moveRightwards: (amount) => {
             this.move({ x: amount, y: 0 })
           },
+          rotateCCW: () => {
+            this.rotate(-90)
+          },
+          rotateCW: () => {
+            this.rotate(90)
+          },
           zoomIn: () => {
             this.zoom(true)
           },
@@ -522,6 +528,14 @@
         if (this.realHeight - this.imgData.startY > this.imgData.height) {
           this.imgData.startY = -(this.imgData.height - this.realHeight)
         }
+      },
+
+      rotate (degrees) {
+        if (!degrees) return
+
+        let ctx = this.ctx
+        ctx.rotate(degrees * Math.PI / 180)
+        this.$emit(events.ROTATE_EVENT)
       },
 
       zoom (zoomIn, pos, innerAcceleration = 1) {

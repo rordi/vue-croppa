@@ -268,6 +268,12 @@ Specifies the remove-button's width and height (they are equal). If set to `0`, 
 
 #### myCroppa.moveRightwards( amountInPx: number )
 
+#### myCroppa.rotateCW()
+- rotate the image clock-wise by 90°
+
+#### myCroppa.rotateCCW()
+- rotate the image counter-clock-wise by 90°
+
 #### myCroppa.zoomIn()
 
 #### myCroppa.zoomOut()
