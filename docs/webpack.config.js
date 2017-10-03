@@ -1,12 +1,13 @@
 var path = require('path')
 var webpack = require('webpack')
 var BrowserSync = require('browser-sync-webpack-plugin')
+var express = require('express')
 
 module.exports = {
   entry: './src/main.js',
   output: {
     path: path.resolve(__dirname, './dist'),
-    publicPath: '/dist/',
+    publicPath: '/vue-croppa/dist/',
     filename: 'build.js'
   },
   externals: {
@@ -54,7 +55,10 @@ module.exports = {
   },
   devServer: {
     historyApiFallback: true,
-    noInfo: true
+    open: false,
+    setup (app) {
+      app.use('/vue-croppa/static/', express.static(path.resolve(__dirname, './static')))
+    }
   },
   performance: {
     hints: false
@@ -63,14 +67,19 @@ module.exports = {
   plugins: [
     new BrowserSync({
       host: 'localhost',
+      files: ['./simple-test.html', './src/croppa/*'],
       port: 3000,
-      proxy: 'http://localhost:8080/'
+      proxy: 'http://localhost:8080/',
+      serveStatic: [{
+        route: '/vue-croppa/static',
+        dir: 'static'
+      }]
     }, { reload: false })
   ]
 }
 
 if (process.env.NODE_ENV === 'production') {
-  module.exports.devtool = '#source-map'
+  module.exports.devtool = 'nosources-source-map'
   // http://vue-loader.vuejs.org/en/workflow/production.html
   module.exports.plugins = (module.exports.plugins || []).concat([
     new webpack.DefinePlugin({
@@ -79,8 +88,8 @@ if (process.env.NODE_ENV === 'production') {
       }
     }),
     new webpack.optimize.UglifyJsPlugin({
-      sourceMap: true,
-      compress: {
+      sourceMap: false,
+      uglifyOptions: {
         warnings: false
       }
     }),

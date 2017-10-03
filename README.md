@@ -6,8 +6,9 @@
 ## Features
 - **Straightforward**: What you see is what you get
 - **Highly customizable**: You can almost customize anything except the core functionalities
-- **Lightweight**: 18kb in total
+- **Lightweight**: 28kb in total
 - **Mobile-friendly**: Supports drag to move and pinch with two fingers to zoom on mobile devices
+- **EXIF orientation**: v0.2.0+ Support correctly show image with EXIF orientation
 
 ## Browser Support
 - IE 10+
@@ -29,7 +30,7 @@
         :placeholder="'Choose an image'"
         :placeholder-font-size="0"
         :placeholder-color="'default'"
-        :input-accept="'image/*'"
+        :accept="'image/*'"
         :file-size-limit="0"
         :quality="2"
         :zoom-speed="3"
@@ -38,11 +39,13 @@
         :disable-click-to-choose="false"
         :disable-drag-to-move="false"
         :disable-scroll-to-zoom="false"
+        :disable-rotation="false"
         :prevent-white-space="false"
         :reverse-scroll-to-zoom="false"
         :show-remove-button="true"
         :remove-button-color="'red'"
         :remove-button-size="0"
+        :initial-image="'path/to/initial-image.png'"
         @init="handleCroppaInit"
         @file-choose="handleCroppaFileChoose"
         @file-size-exceed="handleCroppaFileSizeExceed"
@@ -94,10 +97,60 @@ Not using build tools:
 ```js
 Vue.use(Croppa)
 ```
-
 ### 2. Now you have it. The simplest usage:
 ```html
 <croppa v-model="myCroppa"></croppa>
+```
+```js
+new Vue({
+  // ... other vm options omitted
+  data: {
+    myCroppa: {}
+  },
+
+  methods: {
+    uploadCroppedImage() {
+      this.myCroppa.generateBlob((blob) => {
+        // write code to upload the cropped image file (a file is a blob)
+      }, 'image/jpeg', 0.8) // 80% compressed jpeg file
+    }
+  }
+})
+```
+Live example: https://jsfiddle.net/jdcvpvty/2/
+
+#### NOTE: 
+- Since v0.1.0, you can change the default component name to anything you want.
+
+```js
+import Vue from 'vue'
+import Croppa from 'vue-croppa'
+
+Vue.use(Croppa, { componentName: 'my-image-cropper' })
+```
+
+```html
+<my-image-cropper v-model="myCroppa"></my-image-cropper>
+```
+
+- Since v0.1.1, you can get the component object with `Croppa.component`. This is useful when you want to register the component by yourself manually.
+
+```js
+Vue.component('croppa', Croppa.component)
+```
+```js
+// Register async component (Webpack 2 + ES2015 Example). More about async component: https://vuejs.org/v2/guide/components.html#Async-Components
+Vue.component('croppa', () => import(Croppa.component))
+```
+
+- Since v1.0.0, the v-modeled value and the `ref` both point to the same thing - the component itself. So you don't need to set v-model anymore if you have a `ref` on the component.
+```xml
+<croppa ref="myCroppa"></croppa>
+```
+```js
+this.$refs.myCroppa.chooseFile()
+this.$refs.myCroppa.generateDataUrl()
+// ...
 ```
 
 ## Documentation
@@ -105,9 +158,9 @@ Vue.use(Croppa)
 ### 🌱 Props
 
 #### v-model
-A two-way binding prop. It syncs an object from within the croppa component with a data in parent. We can use this object to invoke useful methods (Check out "[Methods](#-methods)" section).
+A two-way binding prop. It syncs an object from within the croppa component with a data in parent. We can use this object to call useful methods (Check out "[Methods](#-methods)" section). **Since v1.0.0, you don't need this anymore, the `ref` on component can also be used to call methods.**
 - type: `object`
-- default: `null`
+- live example: https://jsfiddle.net/jdcvpvty/2/
 
 #### width
 Display width of the preview container.
@@ -139,15 +192,15 @@ Placeholder text font size in pixel. When set to `0`, the font size will be ajus
 #### canvas-color
 Initial background color and white space color if there is an image.
 - type: same as what `CanvasRenderingContext2D.fillStyle` accepts.
-- default: `'#e6e6e6'`
+- default: before v0.2.0 - `'#e6e6e6'`; after v0.2.0 - `'transparent'`
 
 #### quality
 Specifies how many times larger the actual image is than the container's display size.
 - type: `number`
 - default: `2`
-- valid: `isInteger(val) && val > 0
+- valid: `val > 0`
 
-#### zoom speed
+#### zoom-speed
 Specifies how fast the zoom is reacting to scroll gestures. Default to level 3.
 - type: `number`
 - default: `3`
@@ -156,7 +209,7 @@ Specifies how fast the zoom is reacting to scroll gestures. Default to level 3.
 #### accept
 Limits the types of files that users can choose.
 - type: same as what `accept` attribute of HTML `input` element takes.
-- default: `'.jpg,.png,.gif,.bmp,.webp,.svg,.tiff'`
+- default: no default value since v1.0.0. Specify it as you need.
 
 #### file-size-limit
 Limits the byte size of file that users can choose. If set to `0`, then no limit.
@@ -193,8 +246,13 @@ Disables the default "pinch with two fingers to zoom" user interaction **on mobi
 - type: `boolean`
 - default: `false`
 
+#### disable-rotation
+(**v0.2.0+**) Rotation methods won't work if this is set to `true`
+- type: `boolean`
+- default: `false`
+
 #### <s>reverse-zooming-gesture</s>
-**Deprecated** @v0.0.20+ Please use `reverse-scroll-to-zoom` instead. The name isn't proper because you can not reverse pinch to zoom.
+**Deprecated** Please use `reverse-scroll-to-zoom` instead.
 
 Reverses the zoom-in/zoom-out direction when scrolling.
 - type: `boolean`
@@ -226,10 +284,34 @@ Specifies the remove-button's width and height (they are equal). If set to `0`, 
 - default: default size is ajust accordingly to container's size
 
 #### initial-image
-**@0.1.0+** Set initial image url. This is an alternative way to set initial image besides using slot. Useful when you want to set cross origin image as initial image.
-- type: `string`
+(**v0.1.0+**) Set initial image. You can pass a string as the url or an Image object (HTMLImageElement instance). This is an alternative way to set initial image besides using slot. Useful when you want to set cross origin image as initial image.
+- type: `string` or `object` (HTMLImageElement instance)
 - default: `undefined`
 
+#### initial-size
+(**v0.2.0+**) works similar to css's background-size. It specifies the image's size when it is first loaded on croppa. `contain` and `natural` won't work if `prevent-white-space` is set to `true`.
+- type: `string`
+- default: `'cover'`
+- valid: one of `'cover'`, `'contain'`, `'natural'`
+
+#### initial-position
+(**v0.2.0+**) works similar to css's background-position. It specifies the image's position relative to croppa container when it is first loaded.
+- type: `string`
+- default: `'center'`
+- valid: 
+  - `'center'` (default value)
+  - `'top'`
+  - `'bottom'`
+  - `'left'`
+  - `'right'`
+  - composition of the above words (`'top left'`, `'right top'` etc.)
+  - `'30% 40%'` (similar to background-position in css)
+
+#### input-attrs
+(**v1.0.0+**) to pass attributes to the hidden `input[type=file]` element.
+```html
+<croppa :input-attrs="{capture: true, class: 'file-input'}"></croppa>
+```
 
 ---
 
@@ -247,66 +329,134 @@ Specifies the remove-button's width and height (they are equal). If set to `0`, 
 - If you provide both the slot and `initial-image` prop, the slot will be the one that is used.
 ---
 
+#### placeholder
+- If you are not satified with the simple text placeholder. Since v0.3.0, you can apply an `<img>` slot named `placeholder` to get an image placeholder! The image will be draw on croppa under the placeholder text.
+```html
+<croppa v-model="myCroppa">
+  <img slot="placeholder" src="static/placeholder-image.png" />
+</croppa>
+```
+##### NOTE: 
+- It is recommended to use a small-sized image as the placeholder image.
+- The image will be drawn with 100% width and height of croppa container, i.e. it will cover the container. So it is recommended to use a images with the same aspect ratio as the container.
+- Find demo "Image Placeholder" in the [demo page](https://zhanziyang.github.io/vue-croppa/#/demos)
+
+
+
 ### 🌱 Methods
 
-#### myCroppa.getCanvas()
+#### getCanvas()
 - returns the canvas object
 
-#### myCroppa.getContext()
+#### getContext()
 - returns the canvas context object
 
-#### myCroppa.getChosenFile()
+#### getChosenFile()
 
-#### myCroppa.getActualImageSize()
+#### <s>getActualImageSize()</s>
 - Return an object `{ width, height }` describing the real image size (preview size ` * quality`)
+- **Deprecated** Use `this.myCroppa.outputWidth` and `this.myCroppa.outputHeight` instead.
 
-#### myCroppa.moveUpwards( amountInPx: number )
+#### moveUpwards( amountInPx: number )
 
-#### myCroppa.moveDownwards( amountInPx: number )
+#### moveDownwards( amountInPx: number )
 
-#### myCroppa.moveLeftwards( amountInPx: number )
+#### moveLeftwards( amountInPx: number )
 
-#### myCroppa.moveRightwards( amountInPx: number )
+#### moveRightwards( amountInPx: number )
 
-#### myCroppa.rotateCW()
+#### move({x, y})
+- (**v1.0.0+**) for more flexibility.
+
+#### rotateCW()
 - rotate the image clock-wise by 90°
 
-#### myCroppa.rotateCCW()
+#### rotateCCW()
 - rotate the image counter-clock-wise by 90°
 
-#### myCroppa.zoomIn()
+#### zoomIn()
 
-#### myCroppa.zoomOut()
+#### zoomOut()
 
-#### myCroppa.chooseFile()
+#### zoom(in, timesQuicken)
+- (**v1.0.0+**) for more flexibility.
+
+#### rotate(step: number)
+- 1 step = 90 deg
+- positive number: rotates clockwise
+- negative number: rotates counterclockwise.
+
+#### flipX()
+- Horizontally flip image.
+
+#### flipY()
+- Vertically flip image.
+
+#### chooseFile()
 - Opens the file chooser window to Choose an image. Useful when default click-to-choose interaction is disabled.
 
 #### <s>myCroppa.reset()</s>
-- **To Be Deprecated** This will be deprecated in the future due to misnaming 😅 . Please use `remove()` instead.
+- **Deprecated** Please use `remove()` instead.
+
+#### remove()
 - Removes the current image, can be used to implement your own remove-button.
 
-#### myCroppa.remove()
-- Removes the current image, can be used to implement your own remove-button.
-
-#### myCroppa.refresh()
+#### refresh()
 - Reinitialize the component. Useful when you want to change initial image.
 
-#### myCroppa.hasImage()
+#### hasImage()
 - Return boolean value indicating whether currently there is a image.
 
-#### myCroppa.generateDataUrl( type: string )
-- Returns a data-URL containing a representation of the image in the format specified by the type parameter (defaults to  png).
+#### generateDataUrl( type: string, compressionRate: number )
+- Returns a data-URL containing a representation of the image in the format specified by the `type` parameter (defaults to  png). 
+- `compressionRate` (v0.2.0+) defaults to `1`, you can pass a number between 0 and 1 to get a compressed output image.
 
-#### myCroppa.generateBlob( callback: function, mimeType: string, qualityArgument: number )
+#### generateBlob( callback: function, mimeType: string, compressionRate: number )
 - Creates a Blob object representing the image contained in the canvas. Look up  argument definition [here](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob).
 
-#### myCroppa.promisedBlob( mimeType: string, qualityArgument: number )
+#### promisedBlob( mimeType: string, compressionRate: number )
 - This method returns a `Promise` wrapping around `generateBlob()`, so that you can use `async/await` syntax instead of a callback to get blob data, it's simpler.
 ```js
 const blob = await this.myCroppa.promisedBlob()
 ```
 
-#### myCroppa.supportDetection()
+#### getMetadata()
+- Require v0.3.0+
+- Get metadata that describes current user manipulations (moving, zooming, rotating).
+```js
+var metadata = this.myCroppa.getMetadata()
+console.log(metadata)
+
+/* in console
+{
+  startX:-535.5180530546083,
+  startY:-358.0699623303261,
+  scale:2.2502626424905396,
+  orientation:6
+} 
+*/
+```
+- Find demo "Use Metadata" in the [demo page](https://zhanziyang.github.io/vue-croppa/#/demos).
+
+
+#### applyMetadata(metadata)
+- Require v0.3.0+
+- Apply metadata to get to a certain manipulation state (moving, zooming, rotating).
+- `metadata` can have one or more of these 4 properties: `startX`, `startY`, `scale`, `orientation`. Usually you will use the object returned by `getMetadata()`.
+
+```js
+var metadata = {
+  startX:-535.5180530546083,
+  startY:-358.0699623303261,
+  scale:2.2502626424905396,
+  orientation:6
+}
+
+this.myCroppa.applyMetadata(metadata)
+```
+- Find demo "Use Metadata" in the [demo page](https://zhanziyang.github.io/vue-croppa/#/demos).
+
+#### supportDetection()
 - Return an object indicating browser supports. Like this:
 ```js
 {
@@ -320,7 +470,7 @@ const blob = await this.myCroppa.promisedBlob()
 
 #### init
 - handler(croppa)
-  - `croppa` is a croppa object to invoke methods - same as what `v-model` binds.
+  - `croppa` is the croppa component itself - same as what `v-model` and `ref` bind.
 
 #### file-choose
 - emitted when user choose an image from the poppup window or "drag and drop" a file into the container.
@@ -337,41 +487,84 @@ const blob = await this.myCroppa.promisedBlob()
 - handler(file)
   - `file` is a file object - same as what `getChosenFile()` returns.
 
+#### new-image 
+- emitted when a new valid image is received and read successfully(v0.2.0).
+
+#### new-image-drawn
+- emitted when a new image is drawn on canvas for the first time.
+
 #### image-remove
+- emitted when image remove from croppa.
 
 #### move
 
 #### zoom
 
-#### <s>initial-image-load</s>
-- **Deprecated** Don't use this. It will be removed soon since you can directly listen to native `@load` event on img tag.
-- emitted when initial image is [provided](#initial) and successully loaded.
+#### draw
+- emitted on every view update (including init, move, zoom, rotate) when it is not empty. It is useful when you want to add attachment on image.
+- handler(ctx)
+  - `ctx` is the `CanvasRenderingContext2D` object for you to draw anything you want on the current image. You can also get it with the method `getContext()`.
+- Find demo "Attachments" in the [demo page](https://zhanziyang.github.io/vue-croppa/#/demos).
 
-#### <s>initial-image-error</s>
-- **Deprecated** Don't use this. It will be removed soon since you can directly listen to native `@error` event on img tag.
-- emitted when initial image is [provided](#initial) and failed loading.
-
+#### initial-image-loaded
+- emitted when initial image loaded. It can be useful when you provide initial image with the `initial-image` prop.
 ---
+
+### 🌱 State data
+
+Since v1.0.0, you can access all state data of croppa via the instance. For example,
+```js
+this.myCroppa.naturalWidth
+this.myCroppa.imgData.startX
+this.myCroppa.scaleRatio
+this.myCroppa.pinching
+//...
+```
+All data available:
+
+<img src="https://i.imgur.com/KkgN87h.png?v=3" />
+
+Sorry I'm too lazy to doc about each of them. Please open the **vue-devtool** to figure out what they mean by yourself. 
+
+You can also open an issue to ask me any question about this component.
+
+Note that "computed" and "props" are read-only. Some value on "data" are also not recommended to modify from outside, for example `ctx`, `canvas`, `img`.
 
 ### 🌱 Customize styles
 
 - Check out [default css styles](https://github.com/zhanziyang/vue-croppa/blob/master/dist/vue-croppa.css). You can add more css styles to those selectors to get a different look. Be careful if you try to overwrite existing styles.
 - Note that CSS styles will not have any effect on the output image.
 
-## To Do List
+## Development
 
-- [x] File type filter on drag and drop. Add a `file-type-mismatch` event.
-- [x] Keep default scrolling behavior when there is no image.
-- [x] Browser support detection.
-- [x] Sopport dataTransferItemList interface on drop for better compatibility.
-- [x] Optimize doc page bundle size.
-- [x] Fix remove button shadow.
-- [x] Deprecation warning of unnecessary `initial-image-load` and `initial-image-error` events.
-- [x] Add a method `hasImage()` to represent whether currently there is a image.
-- [x] SSR compatibility.
-- [ ] Make container optionally resizable.
-- [ ] Make default position customizable.
-- [x] Deprecation warning of `reset()` method.
-- [x] Ignore non-file dragging.
-- [x] Change `accept` default value.
-- [x] Replace `for of` with tranditional `for` loop for better compatibility. 
+#### 1. Fork and clone the repo.
+#### 2. Install dependencies.
+```bash
+$ cd vue-croppa
+$ npm install
+``` 
+
+```bash
+$ cd docs
+$ npm install
+```
+#### 3. Start developing.
+```bash
+# under vue-croppa/
+$ npm run dev
+```
+
+```bash
+# under vue-croppa/docs/
+$ npm run dev
+```
+Edit file `./docs/simple-test.html` and open http://localhost:3000/simple-test.html to test while developing.
+
+#### 4. Build
+```bash
+# under vue-croppa/
+$ npm run build
+```
+
+## To Do
+- [ ] Add unit test.
