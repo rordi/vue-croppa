@@ -289,16 +289,16 @@
         if (!this.img) return
         if (window.requestAnimationFrame) {
           requestAnimationFrame(() => {
-            this.paintBackground()
+            this._paintBackground()
             this.ctx.drawImage(this.img, -this.canvas.width / 2, -this.canvas.height / 2, this.canvas.height, this.canvas.width)
           })
         } else {
-          this.paintBackground()
+          this._paintBackground()
           this.ctx.drawImage(this.img, -this.canvas.width / 2, -this.canvas.height / 2, this.canvas.height, this.canvas.width)
         }
 
         this.ctx.translate(-(this.canvas.width / 2), -(this.canvas.height / 2)) // move to top left corner
-        this.draw()
+        this._draw()
         this.$emit(events.ROTATE_EVENT)
       },
       flipX () {
